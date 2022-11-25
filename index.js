@@ -20,6 +20,7 @@ async function run() {
         const bedroomCollection = client.db('recycle-furniture').collection('bedroom');
         const livingCollection = client.db('recycle-furniture').collection('living');
         const bookingsCollection = client.db('recycle-furniture').collection('bookings');
+        const usersCollection = client.db('recycle-furniture').collection('users');
         app.get('/catagoryOptions', async (req, res) => {
             const query = {};
             const result = await catagoriesCollection.find(query).toArray();
@@ -46,6 +47,12 @@ async function run() {
             const catagories = await catagoriesCollection.findOne(query);
             res.send(catagories);
         });
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const result = await usersCollection.insertOne(user);
+            // console.log(result);
+            res.send(result);
+        })
         app.post('/bookings', async (req, res) => {
             const booking = req.body;
             // const query = {
