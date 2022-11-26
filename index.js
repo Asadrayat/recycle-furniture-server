@@ -47,13 +47,28 @@ async function run() {
             const catagories = await catagoriesCollection.findOne(query);
             res.send(catagories);
         });
+        app.get('/jwt', async (req, res) => {
+            const email = req.query.email;
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+            if (user) {
+                const token = jwt.sign({ email }, process.env.Access_Token)
+                return res.send({ accessToken: token })
+            }
+            res.status(403).send({ accessToken: '' })
+        })
+        app.get('/users', async (req, res) => {
+            const query = {};
+            const users = await usersCollection.find(query).toArray();
+            res.send(users);
+        });
         app.post('/users', async (req, res) => {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
             // console.log(result);
             res.send(result);
         })
-        app.get('/bookings',  async (req, res) => {
+        app.get('/bookings', async (req, res) => {
             const email = req.query.email;
             // const decodedEmail = req.decoded.email;
 
