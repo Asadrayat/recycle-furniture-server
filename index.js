@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
 const app = express();
 
@@ -11,6 +12,7 @@ app.use(express.json());
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8nnhhq6.mongodb.net/?retryWrites=true&w=majority`;
+
 
 function verifyJWT(req, res, next) {
 
@@ -41,6 +43,17 @@ async function run() {
         const livingCollection = client.db('recycle-furniture').collection('living');
         const bookingsCollection = client.db('recycle-furniture').collection('bookings');
         const usersCollection = client.db('recycle-furniture').collection('users');
+        const verifyAdmin = async (req, res, next) => {
+            console.log('inside verify admin', req.decoded.email);
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+            const user = await usersCollection.findOne(query);
+
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
+            next();
+        }
         app.get('/catagoryOptions', async (req, res) => {
             const query = {};
             const result = await catagoriesCollection.find(query).toArray();
@@ -86,6 +99,25 @@ async function run() {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
             // console.log(result);
+            res.send(result);
+        })
+        app.get('/users/admin/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email }
+            const user = await usersCollection.findOne(query);
+            res.send({ isAdmin: user?.role === 'admin' });
+        })
+        app.put('/users/admin/:id', verifyAdmin, verifyJWT, async (req, res) => {
+
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) }
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    role: 'admin'
+                }
+            }
+            const result = await usersCollection.updateOne(filter, updatedDoc, options);
             res.send(result);
         })
         app.get('/bookings', async (req, res) => {
