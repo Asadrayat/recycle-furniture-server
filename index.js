@@ -41,10 +41,11 @@ async function run() {
         const diningCollection = client.db('recycle-furniture').collection('dining');
         const bedroomCollection = client.db('recycle-furniture').collection('bedroom');
         const livingCollection = client.db('recycle-furniture').collection('living');
-        const bookingsCollection = client.db('recycle-furniture').collection('bookings');
         const usersCollection = client.db('recycle-furniture').collection('users');
+        const bookingsCollection = client.db('recycle-furniture').collection('bookings');
+        const productsCollection = client.db('recycle-furniture').collection('products');
         const verifyAdmin = async (req, res, next) => {
-            console.log('inside verify admin', req.decoded.email);
+            // console.log('inside verify admin', redecoded.email);
             const decodedEmail = req.decoded.email;
             const query = { email: decodedEmail };
             const user = await usersCollection.findOne(query);
@@ -80,6 +81,27 @@ async function run() {
             const catagories = await catagoriesCollection.findOne(query);
             res.send(catagories);
         });
+        app.get('/products', async (req, res) => {
+            const query = req.body;
+            const products = await productsCollection.find(query).toArray();
+            res.send(products);
+        })
+        app.post('/products', verifyJWT, verifyAdmin, async (req, res) => {
+            const product = req.body;
+            const result = await productsCollection.insertOne(product);
+            res.send(result);
+        })
+        app.delete('/products/:id', verifyJWT, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await productsCollection.deleteOne(filter);
+            res.send(result);
+        })
+        app.get('/bookingSpeciality', async (req, res) => {
+            const query = {};
+            const result = await  catagoriesCollection.find(query).project({ name: 1 }).toArray();
+            res.send(result);
+        })
         app.get('/jwt', async (req, res) => {
             const email = req.query.email;
             const query = { email: email };
@@ -88,7 +110,7 @@ async function run() {
                 const token = jwt.sign({ email }, process.env.Access_Token)
                 return res.send({ accessToken: token })
             }
-            res.status(403).send({ accessToken: '' })
+            return res.status(403).send({ accessToken: '' })
         })
         app.get('/users', async (req, res) => {
             const query = {};
@@ -105,9 +127,9 @@ async function run() {
             const email = req.params.email;
             const query = { email }
             const user = await usersCollection.findOne(query);
-            res.send({ isAdmin: user?.role === 'admin' });
+            return res.send({ isAdmin: user?.role === 'admin' });
         })
-        app.put('/users/admin/:id', verifyAdmin, verifyJWT, async (req, res) => {
+        app.put('/users/admin/:id', async (req, res) => {
 
             const id = req.params.id;
             const filter = { _id: ObjectId(id) }
@@ -118,9 +140,9 @@ async function run() {
                 }
             }
             const result = await usersCollection.updateOne(filter, updatedDoc, options);
-            res.send(result);
+            return res.send(result);
         })
-        app.get('/bookings', async (req, res) => {
+        app.get('/bookings', verifyJWT, async (req, res) => {
             const email = req.query.email;
             const decodedEmail = req.decoded.email;
 
@@ -148,6 +170,7 @@ async function run() {
             const result = await bookingsCollection.insertOne(booking);
             res.send(result);
         });
+        
 
     }
     finally {
