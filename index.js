@@ -129,6 +129,12 @@ async function run() {
             const user = await usersCollection.findOne(query);
             return res.send({ isAdmin: user?.role === 'admin' });
         })
+        app.get('/users/seller/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email }
+            const user = await usersCollection.findOne(query);
+            return res.send({ isAdmin: user?.role === 'seller' });
+        })
         app.put('/users/admin/:id', async (req, res) => {
 
             const id = req.params.id;
