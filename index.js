@@ -33,6 +33,7 @@ function verifyJWT(req, res, next) {
 
 }
 
+
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 async function run() {
@@ -82,11 +83,12 @@ async function run() {
             res.send(catagories);
         });
         app.get('/products', async (req, res) => {
-            const query = req.body;
-            const products = await productsCollection.find(query).toArray();
+            const query = {}
+            const cursor = productsCollection.find(query);
+            const products = await cursor.toArray();
             res.send(products);
-        })
-        app.post('/products', verifyJWT, verifyAdmin, async (req, res) => {
+        });
+        app.post('/products', async (req, res) => {
             const product = req.body;
             const result = await productsCollection.insertOne(product);
             res.send(result);
@@ -99,7 +101,7 @@ async function run() {
         })
         app.get('/bookingSpeciality', async (req, res) => {
             const query = {};
-            const result = await  catagoriesCollection.find(query).project({ name: 1 }).toArray();
+            const result = await catagoriesCollection.find(query).project({ name: 1 }).toArray();
             res.send(result);
         })
         app.get('/jwt', async (req, res) => {
@@ -107,16 +109,22 @@ async function run() {
             const query = { email: email };
             const user = await usersCollection.findOne(query);
             if (user) {
-                const token = jwt.sign({ email }, process.env.Access_Token)
-                return res.send({ accessToken: token })
+                const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '1h' })
+                return res.send({ accessToken: token });
             }
-            return res.status(403).send({ accessToken: '' })
-        })
+            res.status(403).send({ accessToken: '' })
+        });
         app.get('/users', async (req, res) => {
             const query = {};
             const users = await usersCollection.find(query).toArray();
             res.send(users);
         });
+        app.delete('/users/:id', verifyJWT, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await usersCollection.deleteOne(filter);
+            res.send(result);
+        })
         app.post('/users', async (req, res) => {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
@@ -133,9 +141,15 @@ async function run() {
             const email = req.params.email;
             const query = { email }
             const user = await usersCollection.findOne(query);
-            return res.send({ isAdmin: user?.role === 'seller' });
+            return res.send({ isSeller: user?.role === 'seller' });
         })
-        app.put('/users/admin/:id', async (req, res) => {
+        app.get('/users/user/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email }
+            const user = await usersCollection.findOne(query);
+            return res.send({ isUser: user?.role === 'user' });
+        })
+        app.put('/users/admin/:id', verifyAdmin, async (req, res) => {
 
             const id = req.params.id;
             const filter = { _id: ObjectId(id) }
@@ -161,22 +175,11 @@ async function run() {
         })
         app.post('/bookings', async (req, res) => {
             const booking = req.body;
-            // const query = {
-            //     // appointmentDate: booking.appointmentDate,
-            //     email: booking.email,
-            // }
-            // treatement: booking.treatement
-            // }
-            // const alreadyBooked = await bookingsCollection.find(query).toArray();
-            // if (alreadyBooked.length) {
-            //     const message = `You have already booking on ${booking.appointmentDate}`;
-            //     return res.send({ acknowledged: false, message })
 
-            // }
             const result = await bookingsCollection.insertOne(booking);
             res.send(result);
         });
-        
+
 
     }
     finally {
